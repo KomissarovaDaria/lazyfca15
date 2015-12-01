@@ -1,0 +1,7 @@
+1. Доля правильно классифицированных объектов:
+(true_positive+true_negative)/(num_classified)
+2. Доля классифицированных объектов:
+(num_classified)/(num_test_data)
+3. Минимум из долей правильно классифицированных объектов:
+min⁡((true_positive)/(positive_classified);(true_negative)/(negative_classified))
+
