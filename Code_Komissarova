@@ -1,0 +1,106 @@
+def closed_concept(attributes, concept, num_attributes):
+    objects = []
+    attributes_closed = attributes[:]
+
+    for obj in concept.keys():
+        flag = True
+        for attr in attributes:
+            if concept[obj][attr] == 0:
+                flag = False
+                break
+        if flag:
+            objects.append(obj)
+
+    for attr in set(range(num_attributes))-set(attributes):
+        flag = True
+        for obj in objects:
+            if concept[obj][attr] == 0:
+                flag = False
+                break
+        if flag:
+            attributes_closed.append(attr)
+
+    return objects[:], attributes_closed[:]
+
+
+def ganter_algorithm(concept, num_attributes):
+
+    lattice = {}
+    attributes = []
+    formal_notion = closed_concept(attributes, concept, num_attributes)
+    attributes = formal_notion[1][:]
+    lattice[0] = formal_notion
+
+    index_current_concept = 0
+    while len(attributes) < num_attributes:
+        for attr in list(range(num_attributes-1,-1,-1)):
+            if (attr in set(attributes)):
+                attributes.remove(attr)
+            else:
+                attributes.append(attr)
+                formal_notion = closed_concept(attributes, concept, num_attributes)
+                flag_is_new_concept = True
+                for new_attr in set(formal_notion[1])-set(attributes):
+                    if (new_attr < attr):
+                        attributes.remove(attr)
+                        flag_is_new_concept = False
+                        break
+
+                if flag_is_new_concept:
+                    index_current_concept += 1
+                    lattice[index_current_concept] = formal_notion
+                    attributes = formal_notion[1][:]
+                    break
+
+    return lattice
+
+
+#функция классификатора, обучается на train_data
+#классифицирует test_data
+#train_data - словарь, в котором ключи - объекты
+#по данным ключам хранятся списки аттрибутов объекта
+#test_data - словарь, устроен так же как и train_data
+#labels - словарь, в которым ключи объекты,
+#и по каждому ключу хранятся метки объектов (может включать и тестовую выборку)
+#attributes - список возможных аттрибутов объектов с их значениями, например:
+#['color:white','color:red','color:blue','shape:circle','country:Russia']
+def classify_test_data(train_data, test_data, labels, attributes):
+    num_attributes = len(attributes)
+
+    train_data_formated = {}
+    for obj, attr_list in train_data.items():
+        train_data_formated[obj] = []
+        for attr in attributes:
+            if attr in set(attr_list):
+                train_data_formated[obj].append(1)
+            else:
+                train_data_formated[obj].append(0)
+
+    lattice = ganter_algorithm(train_data_formated, num_attributes)
+
+    implications = {}
+    index_implication = 0
+    for formal_notion_key, formal_notion in lattice:
+        current_labels = set()
+        for obj in formal_notion[0]:
+            current_labels.add(labels[obj])
+            if len(current_labels) > 1:
+                break
+        if len(current_labels) == 1:
+            implications[index_implication] = (formal_notion[1], current_labels.pop())
+            index_implication += 1
+
+    test_labels = {}
+    for obj_key, attr in test_data.items():
+        flag_is_classified = False
+        for ind_implication, implication in implications.items():
+            if len(set(implication[0])-set(attr)) == 0:
+                if flag_is_classified:
+                    if test_labels[obj_key] != implication[1]:
+                        flag_is_classified = False
+                        test_labels[obj_key] = 'none'
+                else:
+                    flag_is_classified = True
+                    test_labels[obj_key] = implication[1]
+
+    return test_labels
